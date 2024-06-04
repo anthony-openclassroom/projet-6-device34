@@ -8,6 +8,12 @@ The **Olympic Participation Tracker** is an application designed to record and a
 
 The application is built using **Angular 14.1** and relies on **npm** for package management. Angular offers a powerful framework for creating dynamic web applications, and npm simplifies the process of managing dependencies and scripts.
 
+Summary:
+
+- **NodeJS**: Tested with version 20.11.0
+- **NPM**: Tested with version 10.2.4
+- **NGINX**: Tested with version 1.27
+
 ## Getting Started
 
 ### Install dependencies
@@ -45,6 +51,12 @@ npm pack
 ```
 
 This will create a distributable package containing the compiled code and necessary assets.
+
+### Deploy on nginx
+
+To deploy application on nginx web server with docker you can use nginx config located in the `nginx` folder. This one configure the root application folder in the `/app` folder.
+
+After building the app copy the `dist/olympic-games-starter` folder to the root application folder in the docker image.
 
 ### Publishing to GitLab Registry
 
