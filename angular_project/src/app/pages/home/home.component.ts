@@ -1,10 +1,10 @@
-import { CommonModule } from '@angular/common';
-import { Component, input, InputSignal, Signal } from '@angular/core';
+
+import { Component, input, InputSignal } from '@angular/core';
 import { Olympic } from 'src/app/core/models/Olympic';
 
 @Component({
   selector: 'app-home',
-  imports: [CommonModule],
+  imports: [],
   templateUrl: './home.component.html',
   styleUrls: ['./home.component.scss'],
 })
