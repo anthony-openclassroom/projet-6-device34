@@ -1,0 +1,49 @@
+stages:
+  - test
+
+# ─── Template réutilisable : règles de déclenchement ─────────────────────────
+
+.rules-push-mr:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "push"
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+
+# ─── Job Angular ──────────────────────────────────────────────────────────────
+
+test:angular:
+  stage: test
+  extends: .rules-push-mr
+  image: node:20
+  cache:
+    key: angular-$CI_COMMIT_REF_SLUG
+    paths:
+      - angular_project/node_modules/
+  before_script:
+    - apt-get update -qq && apt-get install -y -qq chromium
+    - export CHROME_BIN=/usr/bin/chromium
+    - cd angular_project && npm ci
+  script:
+    - npm test
+  artifacts:
+    when: always
+    reports:
+      junit: angular_project/reports/*.xml
+    expire_in: 1 week
+
+# ─── Job Spring Boot ──────────────────────────────────────────────────────────
+
+test:java:
+  stage: test
+  extends: .rules-push-mr
+  image: eclipse-temurin:21-jdk
+  cache:
+    key: java-$CI_COMMIT_REF_SLUG
+    paths:
+      - java_project/.gradle/
+  script:
+    - cd java_project && ./gradlew test
+  artifacts:
+    when: always
+    reports:
+      junit: java_project/build/test-results/test/*.xml
+    expire_in: 1 week
