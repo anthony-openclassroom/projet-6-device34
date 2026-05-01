@@ -19,7 +19,7 @@ SET client_min_messages = warning;
 SET row_security = off;
 
 
-ALTER SCHEMA public OWNER TO postgres;
+ALTER SCHEMA public OWNER TO workshops_user;
 
 --
 -- TOC entry 3330 (class 0 OID 0)
@@ -44,7 +44,7 @@ CREATE TABLE public.notion_model (
 );
 
 
-ALTER TABLE public.notion_model OWNER TO postgres;
+ALTER TABLE public.notion_model OWNER TO workshops_user;
 
 --
 -- TOC entry 211 (class 1259 OID 16391)
@@ -57,7 +57,7 @@ CREATE TABLE public.workshop_model (
 );
 
 
-ALTER TABLE public.workshop_model OWNER TO postgres;
+ALTER TABLE public.workshop_model OWNER TO workshops_user;
 
 --
 -- TOC entry 210 (class 1259 OID 16390)
@@ -73,7 +73,7 @@ CREATE SEQUENCE public.workshop_model_id_seq
     CACHE 1;
 
 
-ALTER TABLE public.workshop_model_id_seq OWNER TO postgres;
+ALTER TABLE public.workshop_model_id_seq OWNER TO workshops_user;
 
 --
 -- TOC entry 3331 (class 0 OID 0)
@@ -95,7 +95,7 @@ CREATE TABLE public.workshop_model_notions (
 );
 
 
-ALTER TABLE public.workshop_model_notions OWNER TO postgres;
+ALTER TABLE public.workshop_model_notions OWNER TO workshops_user;
 
 --
 -- TOC entry 3175 (class 2604 OID 16394)
