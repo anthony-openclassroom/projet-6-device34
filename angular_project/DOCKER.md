@@ -73,3 +73,55 @@ Une fois le port libéré, relancer :
 ```bash
 docker compose up -d
 ```
+
+---
+
+## Publier l'image sur GitHub Container Registry
+
+GitHub utilise **ghcr.io** (GitHub Container Registry) à la place de GitLab Registry.
+
+### Prérequis
+
+Créer un token GitHub avec la permission `write:packages` :
+**Settings → Developer settings → Personal access tokens → Generate new token**
+
+### Variables nécessaires
+
+| Variable | Description |
+|----------|-------------|
+| `GITHUB_USERNAME` | Votre nom d'utilisateur GitHub |
+| `GITHUB_TOKEN` | Le token généré ci-dessus |
+| `GITHUB_REPOSITORY` | Ex : `votre-username/olympic-games-starter` |
+
+### Étapes
+
+**1. Se connecter au registry :**
+
+```bash
+echo $GITHUB_TOKEN | docker login ghcr.io -u $GITHUB_USERNAME --password-stdin
+```
+
+**2. Construire et tagger l'image :**
+
+```bash
+docker build -t ghcr.io/$GITHUB_REPOSITORY:latest .
+```
+
+**3. Publier l'image :**
+
+```bash
+docker push ghcr.io/$GITHUB_REPOSITORY:latest
+```
+
+### Utiliser l'image publiée dans docker-compose.yml
+
+Une fois l'image publiée, vous pouvez remplacer le `build` par une référence directe à l'image :
+
+```yaml
+services:
+  app:
+    image: ghcr.io/votre-username/olympic-games-starter:latest
+    ports:
+      - "80:80"
+    restart: unless-stopped
+```
