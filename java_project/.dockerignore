@@ -1,0 +1,7 @@
+.git/
+.github/
+.gradle/
+.vscode/
+build/
+src/main/java-generated/
+k8s/
