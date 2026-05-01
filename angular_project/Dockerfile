@@ -1,8 +1,8 @@
 # ─── Stage 1 : Build ─────────────────────────────────────────────────────────
 # On part d'une image Node.js légère (Alpine) pour compiler l'application.
-# Node 22 LTS : Angular 20 requiert ^20.19.0 ou ^22.12.0 minimum
+# Node 20 LTS : Angular 20 requiert ^20.19.0 minimum
 # L'alias "builder" permet de référencer ce stage depuis le stage suivant.
-FROM node:22-alpine AS builder
+FROM node:20-alpine AS builder
 
 # Définit le répertoire de travail dans le conteneur
 WORKDIR /app
