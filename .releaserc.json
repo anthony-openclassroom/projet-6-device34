@@ -1,0 +1,22 @@
+{
+  "branches": ["main"],
+  "plugins": [
+    "@semantic-release/commit-analyzer",
+    "@semantic-release/release-notes-generator",
+    ["@semantic-release/changelog", {
+      "changelogFile": "CHANGELOG.md"
+    }],
+    ["@semantic-release/npm", {
+      "pkgRoot": "angular_project",
+      "npmPublish": false
+    }],
+    ["@semantic-release/exec", {
+      "prepareCmd": "sed -i \"s/^version = .*/version = '${nextRelease.version}'/\" java_project/build.gradle"
+    }],
+    ["@semantic-release/git", {
+      "assets": ["CHANGELOG.md", "angular_project/package.json", "java_project/build.gradle"],
+      "message": "chore(release): ${nextRelease.version} [skip ci]\n\n${nextRelease.notes}"
+    }],
+    "@semantic-release/github"
+  ]
+}
