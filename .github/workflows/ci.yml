@@ -1,0 +1,85 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+  checks: write
+
+jobs:
+
+  # ─── Angular ────────────────────────────────────────────────────────────────
+
+  test-angular:
+    name: Tests Angular
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Cache node_modules
+        uses: actions/cache@v4
+        with:
+          path: angular_project/node_modules
+          key: angular-${{ runner.os }}-${{ hashFiles('angular_project/package-lock.json') }}
+          restore-keys: angular-${{ runner.os }}-
+
+      - name: Install dependencies
+        working-directory: angular_project
+        run: npm ci
+
+      - name: Run tests
+        working-directory: angular_project
+        run: npm test
+        env:
+          CHROME_BIN: /usr/bin/google-chrome
+
+      - name: Publish test report
+        uses: dorny/test-reporter@v1
+        if: always()
+        with:
+          name: Angular Tests
+          path: angular_project/reports/*.xml
+          reporter: java-junit
+
+  # ─── Spring Boot ────────────────────────────────────────────────────────────
+
+  test-java:
+    name: Tests Spring Boot
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: temurin
+
+      - name: Cache Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+            java_project/.gradle
+          key: java-${{ runner.os }}-${{ hashFiles('java_project/**/*.gradle*') }}
+          restore-keys: java-${{ runner.os }}-
+
+      - name: Run tests
+        working-directory: java_project
+        run: ./gradlew test
+
+      - name: Publish test report
+        uses: dorny/test-reporter@v1
+        if: always()
+        with:
+          name: Spring Boot Tests
+          path: java_project/build/test-results/test/*.xml
+          reporter: java-junit
