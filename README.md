@@ -71,20 +71,42 @@ On each release, `semantic-release` automatically:
 
 ## Quick Start
 
-### Run a project locally
+### Angular — Olympic Participation Tracker
 
+**Dev server (local)**
 ```bash
-# Angular — dev server
 cd angular_project
 npm ci
 npm start            # http://localhost:4200
-
-# Spring Boot — with Docker Compose (includes PostgreSQL)
-cd java_project
-docker compose up -d
 ```
 
-### Run all tests locally
+**Docker** (builds the image and serves via Nginx)
+```bash
+cd angular_project
+docker compose up -d  # http://localhost:80
+```
+
+---
+
+### Spring Boot — Workshop Organizer API
+
+**Local** (requires a running PostgreSQL instance)
+```bash
+cd java_project
+./gradlew bootRun
+```
+
+**Docker** (spins up the API + a PostgreSQL 13 container)
+```bash
+cd java_project
+docker compose up -d  # http://localhost:8080
+```
+
+The `docker compose` stack waits for the database health check before starting the app. Data is persisted in a named Docker volume (`postgres_data`).
+
+---
+
+### Run all tests
 
 ```bash
 # Angular
