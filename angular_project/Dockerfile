@@ -32,7 +32,7 @@ COPY nginx/nginx.conf /etc/nginx/nginx.conf
 
 # Copie uniquement le dossier dist/ produit par le stage "builder"
 # et le place dans /app, chemin attendu par nginx.conf (directive root /app)
-COPY --from=builder /app/dist/olympic-games-starter /app
+COPY --from=builder /app/dist/olympic-games-starter/browser /app
 
 # Documente le port exposé par le conteneur (Nginx écoute sur 80)
 EXPOSE 80
