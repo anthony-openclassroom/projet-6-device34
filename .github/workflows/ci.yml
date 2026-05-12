@@ -1,56 +1,80 @@
+# Nom du workflow — affiché dans l'onglet Actions de GitHub
 name: CI
 
+# ─── Déclencheurs ────────────────────────────────────────────────────────────
+# Le pipeline se lance dans trois situations :
 on:
-  push:
-  pull_request:
+  push:          # À chaque push, quelle que soit la branche
+  pull_request:  # À chaque ouverture ou mise à jour d'une pull request
   schedule:
-    - cron: '0 8 * * 1'  # Chaque lundi à 8h00 UTC
+    - cron: '0 8 * * 1'  # Exécution périodique : chaque lundi à 8h00 UTC
+                          # Format cron : minute heure jour-du-mois mois jour-de-semaine
+                          # 0 8 * * 1 = à 8h00 (0 min), n'importe quel jour/mois, lundi (1)
 
+# ─── Permissions ─────────────────────────────────────────────────────────────
+# Déclare les droits minimaux accordés au GITHUB_TOKEN pour ce workflow.
+# Principe du moindre privilège : on n'accorde que ce qui est nécessaire.
 permissions:
-  contents: write
-  checks: write
-  packages: write
-  issues: write
-  pull-requests: write
+  contents: write       # Lire le code + permettre à semantic-release de créer des tags et commits
+  checks: write         # Publier les rapports de tests (dorny/test-reporter)
+  packages: write       # Pousser les images Docker vers GHCR (GitHub Container Registry)
+  issues: write         # semantic-release/github : créer la GitHub Release
+  pull-requests: write  # semantic-release/github : commenter les PRs avec les notes de release
 
+# ─── Jobs ────────────────────────────────────────────────────────────────────
+# Chaque job s'exécute dans un runner (machine virtuelle) indépendant et éphémère.
+# Les jobs sans "needs:" démarrent en parallèle dès le déclenchement du workflow.
 jobs:
   # ─── Angular ────────────────────────────────────────────────────────────────
 
   test-angular:
     name: Tests Angular
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest  # Runner GitHub-hosted : Ubuntu, propre à chaque run
     steps:
+      # Récupère le code source du dépôt dans le runner
       - uses: actions/checkout@v6
 
+      # Installe Node.js 20 LTS (version requise par Angular 20)
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
           node-version: "20"
 
+      # Met en cache node_modules pour éviter de re-télécharger les dépendances
+      # à chaque run. La clé inclut le hash de package-lock.json :
+      # si le fichier change → nouvelle clé → cache invalidé → npm ci re-télécharge tout
       - name: Cache node_modules
         uses: actions/cache@v5
         with:
           path: angular_project/node_modules
           key: angular-${{ runner.os }}-${{ hashFiles('angular_project/package-lock.json') }}
-          restore-keys: angular-${{ runner.os }}-
+          restore-keys: angular-${{ runner.os }}-  # Clé de fallback si la clé exacte n'existe pas
 
+      # Installe les dépendances de manière reproductible depuis package-lock.json.
+      # "ci" = clean install : supprime node_modules et repart du lock file, sans résolution dynamique.
       - name: Install dependencies
         working-directory: angular_project
         run: npm ci
 
+      # Lance les tests Karma/Jasmine en mode headless (sans navigateur visible).
+      # CHROME_BIN pointe vers Chrome installé sur le runner Ubuntu.
+      # Le résultat est écrit dans angular_project/reports/*.xml (karma-junit-reporter).
       - name: Run tests
         working-directory: angular_project
         run: npm test
         env:
           CHROME_BIN: /usr/bin/google-chrome
 
+      # Publie le rapport JUnit XML dans l'onglet "Checks" du commit/PR sur GitHub.
+      # "if: always()" → s'exécute même si l'étape "Run tests" a échoué,
+      # pour qu'on puisse voir quels tests ont raté même en cas de failure.
       - name: Publish test report
         uses: dorny/test-reporter@v3
         if: always()
         with:
           name: Angular Tests
           path: angular_project/reports/*.xml
-          reporter: java-junit
+          reporter: java-junit  # Format du rapport : JUnit XML (standard inter-outils)
 
   # ─── Spring Boot ────────────────────────────────────────────────────────────
 
@@ -60,12 +84,18 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
+      # Installe Java 21 LTS (distribution Temurin = Adoptium, open-source)
       - name: Setup Java
         uses: actions/setup-java@v5
         with:
           java-version: "21"
           distribution: temurin
 
+      # Met en cache les dépendances Gradle pour éviter de les re-télécharger.
+      # Trois chemins mis en cache :
+      # - ~/.gradle/caches  : dépendances téléchargées (JARs)
+      # - ~/.gradle/wrapper : binaire Gradle lui-même
+      # - java_project/.gradle : cache local du projet
       - name: Cache Gradle
         uses: actions/cache@v5
         with:
@@ -76,10 +106,13 @@ jobs:
           key: java-${{ runner.os }}-${{ hashFiles('java_project/**/*.gradle*') }}
           restore-keys: java-${{ runner.os }}-
 
+      # Lance les tests JUnit via Gradle.
+      # Le rapport XML est généré dans java_project/build/test-results/test/*.xml
       - name: Run tests
         working-directory: java_project
         run: ./gradlew test
 
+      # Publie le rapport JUnit dans l'onglet Checks, même en cas d'échec.
       - name: Publish test report
         uses: dorny/test-reporter@v3
         if: always()
@@ -93,11 +126,18 @@ jobs:
   sonarcloud:
     name: SonarCloud Analysis
     runs-on: ubuntu-latest
+    # Ce job ne démarre qu'une fois les deux jobs de tests terminés avec succès.
+    # Si un test échoue, SonarCloud n'est pas lancé (inutile d'analyser du code cassé).
     needs: [test-angular, test-java]
     steps:
+      # fetch-depth: 0 = historique Git complet.
+      # SonarCloud en a besoin pour calculer les "blame" (qui a écrit quelle ligne)
+      # et pour comparer avec les scans précédents.
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0
+
+      # ── Analyse Angular ──────────────────────────────────────────────────────
 
       - name: Setup Node.js
         uses: actions/setup-node@v6
@@ -115,12 +155,19 @@ jobs:
         working-directory: angular_project
         run: npm ci
 
+      # Relance les tests Angular pour générer le rapport de couverture lcov.
+      # karma-coverage écrit coverage/olympic-games-starter/lcov.info
+      # Ce fichier est ensuite lu par SonarCloud pour afficher la couverture.
       - name: Run Angular tests with coverage
         working-directory: angular_project
         run: npm test
         env:
           CHROME_BIN: /usr/bin/google-chrome
 
+      # Envoie l'analyse Angular à SonarCloud.
+      # Lit la configuration depuis angular_project/sonar-project.properties.
+      # GITHUB_TOKEN : permet à SonarCloud de commenter les PRs avec les résultats.
+      # SONAR_TOKEN  : authentifie le runner auprès de SonarCloud (secret GitHub).
       - name: SonarCloud Scan (Angular)
         uses: SonarSource/sonarcloud-github-action@v3
         with:
@@ -128,6 +175,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
+      # ── Analyse Java ─────────────────────────────────────────────────────────
 
       - name: Setup Java
         uses: actions/setup-java@v5
@@ -145,10 +194,16 @@ jobs:
           key: java-${{ runner.os }}-${{ hashFiles('java_project/**/*.gradle*') }}
           restore-keys: java-${{ runner.os }}-
 
+      # Lance les tests ET génère le rapport JaCoCo XML de couverture.
+      # "jacocoTestReport" est une tâche Gradle ajoutée dans build.gradle.
+      # Elle produit build/reports/jacoco/test/jacocoTestReport.xml
+      # Ce fichier est lu par SonarCloud pour afficher la couverture Java.
       - name: Run Java tests + JaCoCo coverage
         working-directory: java_project
         run: ./gradlew test jacocoTestReport
 
+      # Envoie l'analyse Java à SonarCloud via le plugin Gradle sonarqube.
+      # La configuration (projectKey, organization, etc.) est dans build.gradle.
       - name: SonarCloud Analysis (Java)
         working-directory: java_project
         run: ./gradlew sonar
@@ -161,10 +216,14 @@ jobs:
   build-angular:
     name: Build Angular Docker image
     runs-on: ubuntu-latest
+    # Démarre uniquement si les tests Angular passent.
+    # On ne construit jamais une image à partir d'un code non testé.
     needs: test-angular
     steps:
       - uses: actions/checkout@v6
 
+      # Authentification auprès de GHCR (GitHub Container Registry).
+      # GITHUB_TOKEN est suffisant : pas besoin de token personnel.
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v4
         with:
@@ -172,6 +231,10 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      # Génère automatiquement les tags Docker selon le contexte Git :
+      # - type=sha       → sha-a1b2c3d (identifie précisément le commit)
+      # - type=ref,event=branch → nom de la branche (ex: main, feature/xxx)
+      # - type=ref,event=pr     → pr-42 (numéro de la pull request)
       - name: Docker metadata (tags)
         id: meta
         uses: docker/metadata-action@v6
@@ -182,11 +245,13 @@ jobs:
             type=ref,event=branch
             type=ref,event=pr
 
+      # Construit l'image Docker depuis angular_project/Dockerfile
+      # et la pousse vers GHCR avec tous les tags générés à l'étape précédente.
       - name: Build and push
         uses: docker/build-push-action@v7
         with:
-          context: angular_project
-          push: true
+          context: angular_project       # Chemin du Dockerfile et du contexte de build
+          push: true                     # Pousse l'image après le build (false = build local seulement)
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
 
@@ -195,7 +260,7 @@ jobs:
   build-java:
     name: Build Spring Boot Docker image
     runs-on: ubuntu-latest
-    needs: test-java
+    needs: test-java  # Démarre uniquement si les tests Spring Boot passent
     steps:
       - uses: actions/checkout@v6
 
@@ -229,21 +294,38 @@ jobs:
   release:
     name: Release
     runs-on: ubuntu-latest
+    # Dépend des deux builds Docker : on ne release que si les deux images sont prêtes.
     needs: [build-angular, build-java]
+    # Condition : ce job ne tourne QUE sur la branche main.
+    # Sur les autres branches et les PRs, il est ignoré.
     if: github.ref == 'refs/heads/main'
     steps:
       - name: Checkout
         uses: actions/checkout@v6
         with:
-          fetch-depth: 0
+          fetch-depth: 0  # Historique complet requis par semantic-release pour analyser
+                          # tous les commits depuis la dernière release et calculer le bump
 
+      # Node.js requis pour exécuter semantic-release (outil npm)
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
           node-version: "20"
 
+      # semantic-release analyse les messages de commit (Conventional Commits)
+      # et décide automatiquement du numéro de version :
+      # - fix:  → bump patch (1.0.0 → 1.0.1)
+      # - feat: → bump minor (1.0.0 → 1.1.0)
+      # - feat!: ou BREAKING CHANGE → bump major (1.0.0 → 2.0.0)
+      #
+      # Plugins utilisés :
+      # - @semantic-release/changelog : met à jour CHANGELOG.md
+      # - @semantic-release/npm       : bumpe la version dans angular_project/package.json
+      # - @semantic-release/exec      : bumpe la version dans java_project/build.gradle via sed
+      # - @semantic-release/git       : commite les fichiers modifiés avec "[skip ci]"
+      # - @semantic-release/github    : crée la GitHub Release avec les notes générées
       - name: Run semantic-release
-        id: semantic
+        id: semantic  # L'id permet de référencer les outputs dans les étapes suivantes
         uses: cycjimmy/semantic-release-action@v6
         with:
           extra_plugins: |
@@ -254,18 +336,27 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      # Re-tag les images Docker déjà publiées avec le numéro de version sémantique.
+      # On ne rebuild pas — on retague l'image existante identifiée par son SHA.
+      # Condition : uniquement si semantic-release a publié une nouvelle release
+      # (si aucun commit "feat:" ou "fix:" depuis la dernière release, ce step est ignoré).
       - name: Re-tag Docker images with semantic version
         if: steps.semantic.outputs.new_release_published == 'true'
         env:
-          VERSION: ${{ steps.semantic.outputs.new_release_version }}
+          VERSION: ${{ steps.semantic.outputs.new_release_version }}  # Ex: "1.2.0"
         run: |
+          # Extrait les 7 premiers caractères du SHA du commit (format court)
           SHORT_SHA=${GITHUB_SHA:0:7}
+
+          # Authentification Docker pour pouvoir pull et push
           echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
 
+          # Angular : pull l'image sha → retag avec la version → push le nouveau tag
           docker pull ghcr.io/${{ github.repository }}/angular:sha-${SHORT_SHA}
           docker tag  ghcr.io/${{ github.repository }}/angular:sha-${SHORT_SHA} ghcr.io/${{ github.repository }}/angular:${VERSION}
           docker push ghcr.io/${{ github.repository }}/angular:${VERSION}
 
+          # Java : même opération
           docker pull ghcr.io/${{ github.repository }}/java:sha-${SHORT_SHA}
           docker tag  ghcr.io/${{ github.repository }}/java:sha-${SHORT_SHA} ghcr.io/${{ github.repository }}/java:${VERSION}
           docker push ghcr.io/${{ github.repository }}/java:${VERSION}
