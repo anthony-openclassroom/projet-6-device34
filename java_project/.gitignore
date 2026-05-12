@@ -36,6 +36,9 @@ out/
 ### VS Code ###
 .vscode/
 
+### Environment variables (credentials) ###
+.env
+
 ### OpenAPI Generator ###
 .openapi-generator/
 java-generated/
