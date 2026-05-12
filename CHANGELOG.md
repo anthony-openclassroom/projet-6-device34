@@ -1,3 +1,10 @@
+## [1.1.1](https://github.com/anthony-openclassroom/projet-6-device34/compare/v1.1.0...v1.1.1) (2026-05-12)
+
+
+### Bug Fixes
+
+* **security:** externalize database credentials to environment variables ([28c22d2](https://github.com/anthony-openclassroom/projet-6-device34/commit/28c22d2c595e1b7f66b83d5960f01a18012e554c))
+
 # [1.1.0](https://github.com/anthony-openclassroom/projet-6-device34/compare/v1.0.0...v1.1.0) (2026-05-12)
 
 
