@@ -5,6 +5,8 @@ plugins {
 	id 'java'
 	id 'maven-publish'
 	id 'war'
+	id 'jacoco'
+	id 'org.sonarqube' version '4.4.1.3373'
 }
 
 group = 'fr.oc.devops'
@@ -68,6 +70,24 @@ test {
 	useJUnitPlatform()
 	testLogging {
 		events "passed", "skipped", "failed"
+	}
+	finalizedBy jacocoTestReport
+}
+
+jacocoTestReport {
+	dependsOn test
+	reports {
+		xml.required = true
+		html.required = true
+	}
+}
+
+sonarqube {
+	properties {
+		property 'sonar.projectKey', 'anthony-openclassroom_projet-6-device34_java'
+		property 'sonar.organization', 'anthony-openclassroom'
+		property 'sonar.host.url', 'https://sonarcloud.io'
+		property 'sonar.coverage.jacoco.xmlReportPaths', 'build/reports/jacoco/test/jacocoTestReport.xml'
 	}
 }
 

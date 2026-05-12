@@ -31,6 +31,10 @@ WORKDIR /app
 # Récupération du WAR produit par le stage builder
 COPY --from=builder /app/build/libs/*.war app.war
 
+# Utilisateur système dédié — le conteneur ne s'exécute pas en root
+RUN groupadd --system spring && useradd --system --gid spring spring
+USER spring
+
 EXPOSE 8080
 
 # Le WAR Spring Boot est auto-exécutable via java -jar
