@@ -1,3 +1,10 @@
+## [1.1.2](https://github.com/anthony-openclassroom/projet-6-device34/compare/v1.1.1...v1.1.2) (2026-05-12)
+
+
+### Bug Fixes
+
+* **sonar:** exclude swagger-ui vendor files and generated code from analysis ([619e302](https://github.com/anthony-openclassroom/projet-6-device34/commit/619e302ab4ad2ee25fbba324e4a9a5c0ea09994a))
+
 ## [1.1.1](https://github.com/anthony-openclassroom/projet-6-device34/compare/v1.1.0...v1.1.1) (2026-05-12)
 
 
