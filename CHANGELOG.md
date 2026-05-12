@@ -1,3 +1,10 @@
+# [1.1.0](https://github.com/anthony-openclassroom/projet-6-device34/compare/v1.0.0...v1.1.0) (2026-05-12)
+
+
+### Features
+
+* **ci:** add scheduled CI job to run every Monday at 8:00 UTC for regression detection ([8340bfa](https://github.com/anthony-openclassroom/projet-6-device34/commit/8340bfaf5bd5689c692333dbfe6fdb68b4ac0062))
+
 # 1.0.0 (2026-05-01)
 
 
